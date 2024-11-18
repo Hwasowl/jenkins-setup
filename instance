@@ -1,0 +1,51 @@
+# 젠킨스 -> 도커 ssh키 생성
+docker ps
+docker exec -it 인스턴스명 /bin/bash 
+ssh-keygen -t rsa -b 4096
+
+# 인스턴스 키 설정
+vi ~/.ssh/authorized_keys
+
+# 자바 설정
+sudo dnf install java-17-openjdk
+sudo alternatives --config java
+
+# 방화벽
+sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
+sudo firewall-cmd --reload
+
+# nginx
+upstream backend_servers {
+    server 158.247.x.x:8080;
+    server 141.164.x.x:8080;
+    server 158.247.x.x:8080;
+}
+
+server {
+    listen       80;
+    listen       [::]:80;
+    server_name  _;
+    root         /usr/share/nginx/html;
+
+    # Load configuration files for the default server block.
+    include /etc/nginx/default.d/*.conf;
+
+    error_page 404 /404.html;
+    location = /404.html {
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+    }
+
+    location / {
+            proxy_pass http://backend_servers;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# 연결 설정
+setsebool -P httpd_can_network_connect 1 
